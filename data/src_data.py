@@ -17,29 +17,53 @@ service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 BASE_URL = "https://www.nfl.com"
-PASSING_STATS_URL = "https://www.nfl.com/stats/player-stats/"
-RUSHING_STATS_URL = "https://www.nfl.com/stats/player-stats/category/rushing/2024/post/all/rushingyards/desc"
-RECEIVING_STATS_URL = "https://www.nfl.com/stats/player-stats/category/receiving/2024/post/all/receivingreceptions/desc"
+PASSING_STATS_URLS = {
+    '2024': ["https://www.nfl.com/stats/player-stats/category/passing/2024/post/all/passingyards/desc",
+            "https://www.nfl.com/stats/player-stats/category/passing/2024/REG/all/passingyards/DESC?aftercursor=AAAAGQAAABlAoMIAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5SXlNVFExSWl3aU16SXdNRFF6TkRFdE5USXpOUzA0TnprM0xUTmlPV0V0TUdReU56RXhZekJpWXpJM0lpd2lNakF5TkNKZGZRPT0=",
+            "https://www.nfl.com/stats/player-stats/category/passing/2024/REG/all/passingyards/DESC?aftercursor=AAAAMgAAADJAdpAAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5SXpOakVpTENJek1qQXdORFEwWmkwME1qTXdMVEl6TmpBdE9HVXhOQzFrWW1KbE1XUmxaR1V4TWpBaUxDSXlNREkwSWwxOQ=="],
+    '2023': ["https://www.nfl.com/stats/player-stats/category/passing/2023/post/all/passingyards/DESC",
+            "https://www.nfl.com/stats/player-stats/category/passing/2023/REG/all/passingyards/DESC?aftercursor=AAAAGQAAABlAogoAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5SXlNekE1SWl3aU16SXdNRFF5TlRVdE5USTJOeTA1TnpNeExUZ3hZemd0TkRnMk56TmtZMlZqTldVeUlpd2lNakF5TXlKZGZRPT0=",
+            "https://www.nfl.com/stats/player-stats/category/passing/2023/REG/all/passingyards/DESC?aftercursor=AAAAMgAAADJAgPgAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5STFORE1pTENJek1qQXdOR00wWmkwME16TTNMVFEwT0RJdE9UQTBZeTFoTkRkbU9HUm1NV1EwTVdJaUxDSXlNREl6SWwxOQ=="],
+    '2022': ["https://www.nfl.com/stats/player-stats/category/passing/2022/post/all/passingyards/desc",
+            "https://www.nfl.com/stats/player-stats/category/passing/2022/REG/all/passingyards/DESC?aftercursor=AAAAGQAAABlAooAAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5SXlNelk0SWl3aU16SXdNRFJrTlRVdE5USTJOeTB3TkRFekxUaGtNell0WVRWak0yWmtOemd4WVdFd0lpd2lNakF5TWlKZGZRPT0=",
+            "https://www.nfl.com/stats/player-stats/category/passing/2022/REG/all/passingyards/DESC?aftercursor=AAAAMgAAADJAgegAAAAAADFleUp6WldGeVkyaEJablJsY2lJNld5STFOek1pTENJek1qQXdORFUwT0MwMFl6UXlMVFkxTkRFdFlUSmxaaTFoWWpneVpEbG1PR0ZpWlRraUxDSXlNREl5SWwxOQ=="]
+    }
+RUSHING_STATS_URLS = "https://www.nfl.com/stats/player-stats/category/rushing/2024/post/all/rushingyards/desc"
+RECEIVING_STATS_URLS = ["https://www.nfl.com/stats/player-stats/category/receiving/2024/post/all/receivingreceptions/desc"]
 
+
+def link_helper(lst_of_links):
+    p_links = {}
+
+    for link in lst_of_links:
+        driver.get(link)
+        time.sleep(3)  # Wait for JavaScript to load
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+
+        # Find all player rows
+        player_rows = soup.select("a.d3-o-player-fullname")
+
+        for player in player_rows:
+            name = player.text.strip()
+            link = BASE_URL + player["href"] + "stats/"
+            p_links[name] = link
+
+        return p_links
 
 
 def get_player_links(passing=0, rushing=0, receiving=0):
     """Scrape player profile links from the NFL stats page."""
-    if (passing): driver.get(PASSING_STATS_URL)
-    elif (rushing): driver.get(RUSHING_STATS_URL)
-    elif (receiving): driver.get(RECEIVING_STATS_URL)
-    time.sleep(3)  # Wait for JavaScript to load
-
-    soup = BeautifulSoup(driver.page_source, "html.parser")
     player_links = {}
 
-    # Find all player rows
-    player_rows = soup.select("a.d3-o-player-fullname")
-
-    for player in player_rows:
-        name = player.text.strip()
-        link = BASE_URL + player["href"] + "stats/"
-        player_links[name] = link
+    if (passing): 
+        for key, value in PASSING_STATS_URLS.items():
+            player_links[key] = link_helper(value)
+    elif (rushing):
+        for key, value in RUSHING_STATS_URLS.items():
+            player_links[key] = link_helper(value)
+    elif (receiving):
+        for key, value in RECEIVING_STATS_URLS.items():
+            player_links[key] = link_helper(value)
 
     return player_links
 
@@ -47,7 +71,7 @@ def get_player_links(passing=0, rushing=0, receiving=0):
 # __________________________________________________________________________
 
 
-def get_passing_stats(player_url):
+def get_passing_stats(player_url, year):
     """Scrape player passing stats."""
     driver.get(player_url)
     time.sleep(3)
@@ -83,6 +107,7 @@ def get_passing_stats(player_url):
             lost = cells[17].text.strip() 
 
             passing_stats.append({
+                "Year": year,
                 "Wk": wk,
                 "Opp": opp,
                 "Result": result,
@@ -109,7 +134,7 @@ def get_passing_stats(player_url):
   # __________________________________________________________________________
 
 
-def get_rushing_stats(player_url):
+def get_rushing_stats(player_url, year):
     """Scrape player rushing stats."""
     driver.get(player_url)
     time.sleep(3)
@@ -143,6 +168,7 @@ def get_rushing_stats(player_url):
             
 
             rushing_stats.append({
+                "Year": year,
                 "Wk": wk,
                 "Opp": opp,
                 "Result": result,   
@@ -166,7 +192,7 @@ def get_rushing_stats(player_url):
 # __________________________________________________________________________
 
 
-def get_receiving_stats(player_url):
+def get_receiving_stats(player_url, year):
     """Scrape player receiving stats."""
     driver.get(player_url)
     time.sleep(3)
@@ -199,6 +225,7 @@ def get_receiving_stats(player_url):
             
 
             receiving_stats.append({
+                "Year": year,
                 "Wk": wk,
                 "Opp": opp,
                 "Result": result,  
@@ -230,19 +257,21 @@ def write_player_data(passing=0, rushing=0, receiving=0):
         else:
             print(f"Scraping {key} stats..")
 
-            player_links = get_player_links(**{key:1})
+            player_links_dict = get_player_links(**{key:1})
             all_stats = {}
 
-            for name, url in player_links.items():
-                print(f"Scraping stats for {name}...")
-                stats = funcs[key](url)
+            for year, links in player_links_dict.items():
 
-                if stats:
-                    all_stats[name] = stats
+                for name, url in links.items():
+                    print(f"Scraping stats for {name}...")
+                    stats = funcs[key](url, year)
+
+                    if stats:
+                        all_stats[(name, year)] = stats
 
             # Save to CSV
             df = pd.DataFrame([
-                {"Player": player, **stat} for player, stats in all_stats.items() for stat in stats
+                {"Player": player[0], **stat} for player, stats in all_stats.items() for stat in stats
             ])
             df.to_csv(f"nfl_{key}_stats.csv", index=False)
             print(f"Data saved to nfl_{key}_stats.csv")
