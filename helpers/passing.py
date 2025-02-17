@@ -73,7 +73,7 @@ def prep_td(data):
 
 def sample_stats(data,state):
     stats = []
-    sample = data.sample(frac=0.33, random_state=state)
+    sample = data.sample(frac=0.33, replace=True, random_state=state)
 
     p = np.random.random()
 
