@@ -1,15 +1,18 @@
 import pandas as pd
 import numpy as np
 from scipy import stats
+from sklearn.impute import KNNImputer
 
 
 def clean_nan(data):
-    data = data.reset_index(drop=True)
+    # numeric stat columns and drop rows for the 18th week
+    subset = data[data['Wk'] != 18].reset_index(drop=True).iloc[:,5:]
 
-    for col in data.columns[5:]:
-        data[col].fillna(np.mean(data[col]), inplace=True)
-            
-    return data
+    # fit new values to most columns with NaN  
+    imputer = KNNImputer(n_neighbors=3).fit_transform(subset)
+    
+    # return updated values 
+    return data.update(pd.DataFrame(imputer, columns=subset.columns)) 
 
 
 # __________________________________________________________________________
